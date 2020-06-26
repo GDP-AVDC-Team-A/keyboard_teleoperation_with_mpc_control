@@ -39,13 +39,10 @@
 #include <curses.h>
 #include <thread>
 #include <locale.h>
-#include "aerostack_msgs/FlightActionCommand.h"
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TwistStamped.h>
 #include "mav_msgs/RollPitchYawrateThrust.h"
-#include "aerostack_msgs/SetControlMode.h"
-#include "aerostack_msgs/MotionControlMode.h"
-#include <aerostack_msgs/RequestBehavior.h>
+#include "aerostack_msgs/FlightActionCommand.h"
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -78,72 +75,30 @@ const int RIGHT = 2;
 const int UP = 3;
 const int DOWN = 4;
 //Publishers
-ros::Publisher command_publ;
-ros::Publisher speed_reference_publ;
 ros::Publisher pose_reference_publ;
-ros::Publisher command_pitch_roll_publ;
-ros::Publisher attitude_publ;
+ros::Publisher flightaction_pub;
 //Subscribers
 ros::Subscriber self_pose_sub;
-ros::Subscriber control_mode;
-ros::Subscriber speed_reference_sub;
-ros::Subscriber command_pitch_roll_sub;
-ros::Subscriber command_pitch_roll_stop_sub;
 ros::Subscriber ground_speed_sub;
-ros::Subscriber attitude_sub;
-ros::Subscriber altitude_sub;
-//Services
-ros::ServiceClient setControlModeClientSrv;
-ros::ServiceClient startQuadrotorControllerClientSrv;
-ros::ServiceClient initiate_behaviors_srv;
-ros::ServiceClient activate_behavior_srv;
 
 //MSG
-aerostack_msgs::MotionControlMode control_mode_msg;
-aerostack_msgs::FlightActionCommand command_order;
 geometry_msgs::PoseStamped self_localization_pose_msg; 
 geometry_msgs::PoseStamped motion_reference_pose_msg; 
-geometry_msgs::TwistStamped speed_reference_msg;
-geometry_msgs::TwistStamped current_speed_ref;
-geometry_msgs::TwistStamped self_speed_msg;;
+geometry_msgs::PoseStamped motion_reference_pose_2_msg; 
+geometry_msgs::TwistStamped self_speed_msg;
+aerostack_msgs::FlightActionCommand flight_action_msg;
 
-//Services variables
-std_srvs::Empty req;
-aerostack_msgs::RequestBehavior::Request msg2;
-aerostack_msgs::RequestBehavior::Response res;
-aerostack_msgs::BehaviorCommand behavior;
+
 
 //Functions
 void printoutPoseControls();
-void printoutGroundSpeedControls();
-void printoutAttitudeControls();
-void publishCmd();
-void takeOff();
-void hover();
-void land();
-void emergencyStop();
-void move();
 void toEulerianAngle(geometry_msgs::PoseStamped q, double *roll, double *pitch, double *yaw);
 double current_commands_roll,current_commands_pitch,current_commands_yaw;
 tf2::Quaternion q_rot;
 void selfLocalizationPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
-void controlModeCallback(const aerostack_msgs::MotionControlMode::ConstPtr& msg);
-void speedReferenceCallback(const geometry_msgs::TwistStamped::ConstPtr& msg);
-void attitudeCallback(const std_msgs::Int8::ConstPtr& msg);
 void selfSpeedCallback(const geometry_msgs::TwistStamped::ConstPtr& msg);
-void publishSpeedReference();
-bool setControlMode(int new_control_mode);
-void clearSpeedReferences();
-int current_mode;
-//Topics
+
+
 std::string drone_id_namespace;
-std::string flight_action_topic_name;
-std::string speed_ref_topic_name;
-std::string pose_ref_topic_name;
-std::string self_pose_topic_name;
-std::string assumed_control_mode_topic_name;
-std::string set_control_mode_service_name;
-std::string command_pitch_roll_topic_name;
-std::string self_speed_topic_name;
 
 #endif

@@ -27,10 +27,10 @@ set(KEYBOARD_TELEOPERATION_WITH_MPC_CONTROL_SOURCE_FILES
 
 set(CMAKE_AUTOMOC ON)
 
-find_package(catkin REQUIRED COMPONENTS roscpp std_msgs sensor_msgs lib_cvgutils geometry_msgs image_transport cv_bridge aerostack_msgs)
+find_package(catkin REQUIRED COMPONENTS roscpp std_msgs sensor_msgs aerostack_msgs lib_cvgutils geometry_msgs image_transport cv_bridge)
 catkin_package(
         DEPENDS OpenCV
-        CATKIN_DEPENDS roscpp std_msgs sensor_msgs geometry_msgs lib_cvgutils image_transport cv_bridge aerostack_msgs
+        CATKIN_DEPENDS roscpp std_msgs sensor_msgs geometry_msgs aerostack_msgs lib_cvgutils image_transport cv_bridge
   )
 include_directories(${KEYBOARD_TELEOPERATION_WITH_MPC_CONTROL_INCLUDE_DIR})
 include_directories(${KEYBOARD_TELEOPERATION_WITH_MPC_CONTROL_CONTROLLER_INCLUDE_DIR})

@@ -63,8 +63,7 @@ int main(int argc, char** argv){
 
   //Publishers
   pose_reference_publ = n.advertise<geometry_msgs::PoseStamped>("/"+drone_id_namespace+"/motion_reference/pose", 1, true);
-  attitude_publ = n.advertise<std_msgs::Int8>("/"+drone_id_namespace+"/keyboard_teleoperation_with_mpc_control/attitude_control", 1, true);
-  command_publ = n.advertise<aerostack_msgs::FlightActionCommand>("/" + drone_id_namespace + "/actuator_command/flight_action", 1, true);
+  flightaction_pub = n.advertise<aerostack_msgs::FlightActionCommand>("/"+drone_id_namespace+"/actuator_command/flight_action", 1, true);
 
   //Subscribers
   self_pose_sub = n.subscribe("/"+drone_id_namespace+"/self_localization/pose", 1, selfLocalizationPoseCallback);
@@ -74,7 +73,7 @@ int main(int argc, char** argv){
   
 
   move(0,0);clrtoeol();
-  printw("               - KEYBOARD TELEOPERATION WITH MPC CONTROL -");
+  printw("                  - KEYBOARD TELEOPERATION WITH MPC CONTROL -");
   move(3,0);clrtoeol();
   printw("--------------------------------------------------------------------------------");
   //Print controls
@@ -85,70 +84,82 @@ int main(int argc, char** argv){
   while (ros::ok()){
     // Read messages
     ros::spinOnce();
-
     move(16,0);
     printw("                        Last key pressed: ");
     //Read command
     command = getch();
     switch (command){
       case 't':  // Take off
-        takeOff();
         printw("t       ");clrtoeol();
         move(17, 0); 
         printw("                        Last command:     Take off           ");clrtoeol();
-        sleep(3);
+        flight_action_msg.action = aerostack_msgs::FlightActionCommand::TAKE_OFF;
+        flightaction_pub.publish(flight_action_msg);
         motion_reference_pose_msg.pose.position = self_localization_pose_msg.pose.position;
         motion_reference_pose_msg.pose.position.z = 1;
         pose_reference_publ.publish(motion_reference_pose_msg);
         break;
       case 'y':  // Land
-        hover();
-        land();
-        startQuadrotorControllerClientSrv=n.serviceClient<std_srvs::Empty>("/"+drone_id_namespace+"/quadrotor_pid_controller_process/stop");
-        startQuadrotorControllerClientSrv.call(req);
+        flight_action_msg.action = aerostack_msgs::FlightActionCommand::LAND;
+        flightaction_pub.publish(flight_action_msg);
+        motion_reference_pose_msg.pose.position = self_localization_pose_msg.pose.position;
+        motion_reference_pose_msg.pose.position.z = 0;
+        pose_reference_publ.publish(motion_reference_pose_msg);
         printw("y        ");clrtoeol(); 
         move(17, 0); 
         printw("                        Last command:     Land             ");clrtoeol();            
         break;
       case 'h':  // Hover   
       {
-        hover();
         printw("h      ");clrtoeol();
         move(17, 0); printw("                        Last command:     Keep hovering             ");clrtoeol();refresh();
+        flight_action_msg.action = aerostack_msgs::FlightActionCommand::HOVER;
+        flightaction_pub.publish(flight_action_msg);
         motion_reference_pose_msg.pose = self_localization_pose_msg.pose;                                             
         pose_reference_publ.publish(motion_reference_pose_msg);        
         break;
       }
       case 'q':  // Move upwards
-        move();
+        flight_action_msg.action = aerostack_msgs::FlightActionCommand::MOVE;
+        flightaction_pub.publish(flight_action_msg);
+        if(motion_reference_pose_msg.pose.position.z == 0 && motion_reference_pose_msg.pose.position.x == 0 && motion_reference_pose_msg.pose.position.y == 0){
+          motion_reference_pose_msg.pose = self_localization_pose_msg.pose;
+        }
         motion_reference_pose_msg.pose.position.z = motion_reference_pose_msg.pose.position.z + CTE_ALTITUDE;
-        motion_reference_pose_msg.pose.orientation = motion_reference_pose_msg.pose.orientation;
         pose_reference_publ.publish(motion_reference_pose_msg);
         printw("q      ");clrtoeol();
         move(17, 0); 
         printw("                        Last command:     Increase altitude         ");clrtoeol();
         break;
       case 'a':  //Move downwards
-        move();
-          motion_reference_pose_msg.pose.position.z = motion_reference_pose_msg.pose.position.z - CTE_ALTITUDE;
-          motion_reference_pose_msg.pose.orientation = motion_reference_pose_msg.pose.orientation;
-          pose_reference_publ.publish(motion_reference_pose_msg);
+        flight_action_msg.action = aerostack_msgs::FlightActionCommand::MOVE;
+        flightaction_pub.publish(flight_action_msg);
+        if(motion_reference_pose_msg.pose.position.z == 0 && motion_reference_pose_msg.pose.position.x == 0 && motion_reference_pose_msg.pose.position.y == 0){
+          motion_reference_pose_msg.pose = self_localization_pose_msg.pose;
+        }
+        motion_reference_pose_msg.pose.position.z = motion_reference_pose_msg.pose.position.z - CTE_ALTITUDE;
+        pose_reference_publ.publish(motion_reference_pose_msg);
         printw("a        ");clrtoeol();
         move(17, 0); 
         printw("                        Last command:     Decrease altitude         ");clrtoeol(); 
         break;         
       case 'z':  //(yaw) turn counter-clockwise
-      {        
-        move();       
+      {             
+        flight_action_msg.action = aerostack_msgs::FlightActionCommand::MOVE;
+        flightaction_pub.publish(flight_action_msg);  
         double yaw,r,p;
         toEulerianAngle(motion_reference_pose_msg, &r,&p,&yaw);
         q_rot.setRPY(r, p, yaw + CTE_YAW);
         current_commands_yaw = yaw + CTE_YAW;
+
+        if(motion_reference_pose_msg.pose.position.z == 0 && motion_reference_pose_msg.pose.position.x == 0 && motion_reference_pose_msg.pose.position.y == 0){
+          motion_reference_pose_msg.pose = self_localization_pose_msg.pose;
+        }
         motion_reference_pose_msg.pose.orientation.w = q_rot.getW();
         motion_reference_pose_msg.pose.orientation.x = q_rot.getX();
         motion_reference_pose_msg.pose.orientation.y = q_rot.getY();
         motion_reference_pose_msg.pose.orientation.z = q_rot.getZ();
-        motion_reference_pose_msg.pose.position = motion_reference_pose_msg.pose.position;
+
         pose_reference_publ.publish(motion_reference_pose_msg);
         printw("z       ");clrtoeol();
         move(17, 0); 
@@ -156,17 +167,20 @@ int main(int argc, char** argv){
         break;    
       }      
       case 'x':  // (yaw) turn clockwise
-      {      
-        move();       
+      {
+        flight_action_msg.action = aerostack_msgs::FlightActionCommand::MOVE;
+        flightaction_pub.publish(flight_action_msg);
         double yaw,r,p;
         toEulerianAngle(motion_reference_pose_msg, &r,&p,&yaw);
         q_rot.setRPY(r, p, yaw - CTE_YAW);
         current_commands_yaw = yaw - CTE_YAW;
+        if(motion_reference_pose_msg.pose.position.z == 0 && motion_reference_pose_msg.pose.position.x == 0 && motion_reference_pose_msg.pose.position.y == 0){
+          motion_reference_pose_msg.pose = self_localization_pose_msg.pose;
+        }
         motion_reference_pose_msg.pose.orientation.w = q_rot.getW();
         motion_reference_pose_msg.pose.orientation.x = q_rot.getX();
         motion_reference_pose_msg.pose.orientation.y = q_rot.getY();
         motion_reference_pose_msg.pose.orientation.z = q_rot.getZ();
-        motion_reference_pose_msg.pose.position = motion_reference_pose_msg.pose.position;
         pose_reference_publ.publish(motion_reference_pose_msg);
         printw("x      ");clrtoeol();
         move(17, 0); 
@@ -174,40 +188,48 @@ int main(int argc, char** argv){
       }
         break;                 
       case ASCII_KEY_RIGHT:
-        motion_reference_pose_msg.pose.orientation = motion_reference_pose_msg.pose.orientation;
-        motion_reference_pose_msg.pose.position.x = motion_reference_pose_msg.pose.position.x;
+        flight_action_msg.action = aerostack_msgs::FlightActionCommand::MOVE;
+        flightaction_pub.publish(flight_action_msg);
+        if(motion_reference_pose_msg.pose.position.z == 0 && motion_reference_pose_msg.pose.position.x == 0 && motion_reference_pose_msg.pose.position.y == 0){
+          motion_reference_pose_msg.pose = self_localization_pose_msg.pose;
+        }
         motion_reference_pose_msg.pose.position.y = motion_reference_pose_msg.pose.position.y - CTE_POSE;
-        motion_reference_pose_msg.pose.position.z = motion_reference_pose_msg.pose.position.z;
         pose_reference_publ.publish(motion_reference_pose_msg);
         printw("\u2192            ");clrtoeol();
         move(17, 0); 
         printw("                        Last command:     Increase movement to the right        ");clrtoeol();  
         break;               
       case ASCII_KEY_LEFT:
-        motion_reference_pose_msg.pose.orientation = motion_reference_pose_msg.pose.orientation;
-        motion_reference_pose_msg.pose.position.x = motion_reference_pose_msg.pose.position.x;
+        flight_action_msg.action = aerostack_msgs::FlightActionCommand::MOVE;
+        flightaction_pub.publish(flight_action_msg);
+        if(motion_reference_pose_msg.pose.position.z == 0 && motion_reference_pose_msg.pose.position.x == 0 && motion_reference_pose_msg.pose.position.y == 0){
+          motion_reference_pose_msg.pose = self_localization_pose_msg.pose;
+        }
         motion_reference_pose_msg.pose.position.y = motion_reference_pose_msg.pose.position.y + CTE_POSE;
-        motion_reference_pose_msg.pose.position.z = motion_reference_pose_msg.pose.position.z;
         pose_reference_publ.publish(motion_reference_pose_msg);       
         printw("\u2190            ");clrtoeol();
         move(17, 0); 
         printw("                        Last command:     Increase movement to the left         ");clrtoeol();
         break;       
       case ASCII_KEY_DOWN:
-        motion_reference_pose_msg.pose.orientation = motion_reference_pose_msg.pose.orientation;
+        flight_action_msg.action = aerostack_msgs::FlightActionCommand::MOVE;
+        flightaction_pub.publish(flight_action_msg);
+        if(motion_reference_pose_msg.pose.position.z == 0 && motion_reference_pose_msg.pose.position.x == 0 && motion_reference_pose_msg.pose.position.y == 0){
+          motion_reference_pose_msg.pose = self_localization_pose_msg.pose;
+        }
         motion_reference_pose_msg.pose.position.x = motion_reference_pose_msg.pose.position.x - CTE_POSE;
-        motion_reference_pose_msg.pose.position.y = motion_reference_pose_msg.pose.position.y;
-        motion_reference_pose_msg.pose.position.z = motion_reference_pose_msg.pose.position.z;
         pose_reference_publ.publish(motion_reference_pose_msg);          
         printw("\u2193     ");clrtoeol();
         move(17, 0); 
         printw("                        Last command:     Increase backward      ");clrtoeol();
         break;        
       case ASCII_KEY_UP:
-        motion_reference_pose_msg.pose.orientation = motion_reference_pose_msg.pose.orientation;
+        flight_action_msg.action = aerostack_msgs::FlightActionCommand::MOVE;
+        flightaction_pub.publish(flight_action_msg);
+        if(motion_reference_pose_msg.pose.position.z == 0 && motion_reference_pose_msg.pose.position.x == 0 && motion_reference_pose_msg.pose.position.y == 0){
+          motion_reference_pose_msg.pose = self_localization_pose_msg.pose;
+        }
         motion_reference_pose_msg.pose.position.x = motion_reference_pose_msg.pose.position.x + CTE_POSE;
-        motion_reference_pose_msg.pose.position.y = motion_reference_pose_msg.pose.position.y;
-        motion_reference_pose_msg.pose.position.z = motion_reference_pose_msg.pose.position.z;
         pose_reference_publ.publish(motion_reference_pose_msg);    
         printw("\u2191    ");clrtoeol();
         move(17, 0); 
@@ -217,14 +239,18 @@ int main(int argc, char** argv){
     {
       printw("r        ");clrtoeol();
       move(17, 0); 
+      flight_action_msg.action = aerostack_msgs::FlightActionCommand::MOVE;
+      flightaction_pub.publish(flight_action_msg);
       printw("                        Last command:     Reset orientation           ");clrtoeol(); 
-        current_commands_yaw = 0;
-        motion_reference_pose_msg.pose.orientation.w = 0;
-        motion_reference_pose_msg.pose.orientation.x = 0;
-        motion_reference_pose_msg.pose.orientation.y = 0;
-        motion_reference_pose_msg.pose.orientation.z = 0;
-        motion_reference_pose_msg.pose.position = motion_reference_pose_msg.pose.position;
-        pose_reference_publ.publish(motion_reference_pose_msg);     
+      if(motion_reference_pose_msg.pose.position.z == 0 && motion_reference_pose_msg.pose.position.x == 0 && motion_reference_pose_msg.pose.position.y == 0){
+        motion_reference_pose_msg.pose = self_localization_pose_msg.pose;
+      }
+      current_commands_yaw = 0;
+      motion_reference_pose_msg.pose.orientation.w = 0;
+      motion_reference_pose_msg.pose.orientation.x = 0;
+      motion_reference_pose_msg.pose.orientation.y = 0;
+      motion_reference_pose_msg.pose.orientation.z = 0;
+      pose_reference_publ.publish(motion_reference_pose_msg);     
     }
     break;            
     }
@@ -253,41 +279,18 @@ void printoutPoseControls(){
   attron(COLOR_PAIR(5));printw("    \u2192");attroff(COLOR_PAIR(5));printw("  Increase position to the right %.2f m  ",CTE_POSE);  
 
   move(8,0);clrtoeol();
-  attron(COLOR_PAIR(5));printw("    \u2190");attroff(COLOR_PAIR(5));printw("  Increase position to the left %.2f m  ",CTE_POSE);
+  attron(COLOR_PAIR(5));printw("   r");attroff(COLOR_PAIR(5));printw("      Reset orientation    ");
+  attron(COLOR_PAIR(5));printw("     \u2190");attroff(COLOR_PAIR(5));printw("  Increase position to the left %.2f m  ",CTE_POSE);
   
   move(9,0);clrtoeol();
-  attron(COLOR_PAIR(5));printw("   r");attroff(COLOR_PAIR(5));printw("      Reset orientation    ");  
+  attron(COLOR_PAIR(5));printw("   q");attroff(COLOR_PAIR(5));printw("      Increase altitude %.2f m ",CTE_ALTITUDE);
   
   move(10,0);clrtoeol();
-  printw("                                   ");
-  attron(COLOR_PAIR(5));printw(" q");attroff(COLOR_PAIR(5));printw("  Increase altitude %.2f m           ",CTE_ALTITUDE);
+  attron(COLOR_PAIR(5));printw("   a");attroff(COLOR_PAIR(5));printw("      Decrease altitude %.2f m ",CTE_ALTITUDE);
+
   move(11,0);clrtoeol();
-  attron(COLOR_PAIR(5));printw("  a");attroff(COLOR_PAIR(5));printw("  Decrease altitude %.2f m            ",CTE_ALTITUDE);
-  move(15,0);clrtoeol();
   printw("--------------------------------------------------------------------------------");
   refresh();
-}
-
-//Take off
-void takeOff(){
-  command_order.action = aerostack_msgs::FlightActionCommand::TAKE_OFF;
-  publishCmd();
-}
-
-//Hover
-void hover(){
-  clearSpeedReferences();
-  publishSpeedReference();
-  command_order.action = aerostack_msgs::FlightActionCommand::HOVER;
-  publishCmd();
-}
-
-//Land
-void land(){
-  clearSpeedReferences();
-  publishSpeedReference();
-  command_order.action = aerostack_msgs::FlightActionCommand::LAND;
-  publishCmd();
 }
 
 //Self localization callback
