@@ -282,13 +282,19 @@ void printoutPoseControls(){
   attron(COLOR_PAIR(5));printw("   r");attroff(COLOR_PAIR(5));printw("      Reset orientation    ");
   attron(COLOR_PAIR(5));printw("     \u2190");attroff(COLOR_PAIR(5));printw("  Increase position to the left %.2f m  ",CTE_POSE);
   
-  move(9,0);clrtoeol();
-  attron(COLOR_PAIR(5));printw("   q");attroff(COLOR_PAIR(5));printw("      Increase altitude %.2f m ",CTE_ALTITUDE);
+  move(9,36);clrtoeol();
+  attron(COLOR_PAIR(5));printw("q");attroff(COLOR_PAIR(5));printw("  Increase altitude %.2f m ",CTE_ALTITUDE);
   
-  move(10,0);clrtoeol();
-  attron(COLOR_PAIR(5));printw("   a");attroff(COLOR_PAIR(5));printw("      Decrease altitude %.2f m ",CTE_ALTITUDE);
+  move(10,36);clrtoeol();
+  attron(COLOR_PAIR(5));printw("a");attroff(COLOR_PAIR(5));printw("  Decrease altitude %.2f m ",CTE_ALTITUDE);
 
-  move(11,0);clrtoeol();
+  move(11,36);clrtoeol();
+  attron(COLOR_PAIR(5));printw("z");attroff(COLOR_PAIR(5));printw("  Turn counter-clockwise %.2f rad      ",CTE_YAW);
+
+  move(12,36);clrtoeol();
+  attron(COLOR_PAIR(5));printw("x");attroff(COLOR_PAIR(5));printw("  Turn clockwise %.2f rad        ",CTE_YAW);
+
+  move(13,0);clrtoeol();
   printw("--------------------------------------------------------------------------------");
   refresh();
 }

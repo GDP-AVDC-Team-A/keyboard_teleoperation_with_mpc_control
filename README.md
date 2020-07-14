@@ -1,6 +1,6 @@
 # Keyboard Teleoperation With MPC Control
 
-![Interface](https://i.ibb.co/kghg0yC/Keyboard-teleoperation-with-mpc.png)
+![Interface](https://i.ibb.co/9gZ91Ns/keyboard-mpc.png)
 
 # Subscribed topics
 
